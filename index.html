@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Pro - Hernán</title>
+    <title>Dashboard Financiero - Hernán</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -13,11 +13,11 @@
     <header class="bg-slate-900 text-white p-6 shadow-xl border-b-4 border-emerald-500">
         <div class="container mx-auto flex flex-col md:flex-row justify-between items-center">
             <div>
-                <h1 class="text-3xl font-black tracking-tight">📊 CENTRO DE ANÁLISIS FINANCIERO</h1>
-                <p class="text-emerald-400 font-medium">Análisis profundo de ingresos, inflación y divisas</p>
+                <h1 class="text-3xl font-black tracking-tight">📊 DASHBOARD SALARIAL</h1>
+                <p class="text-emerald-400 font-medium">Análisis de ingresos netos reales</p>
             </div>
             <div class="mt-4 md:mt-0 text-right bg-slate-800 p-3 rounded-lg border border-slate-700">
-                <p class="text-xs text-gray-400 uppercase tracking-widest">Última actualización de mercado</p>
+                <p class="text-xs text-gray-400 uppercase tracking-widest">Última actualización TC</p>
                 <p id="kpi-mep-header" class="text-lg font-bold text-emerald-400">USD MEP: Cargando...</p>
             </div>
         </div>
@@ -26,45 +26,46 @@
     <main class="container mx-auto p-4 md:p-8">
         
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            
             <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-emerald-500 relative overflow-hidden">
-                <p class="text-xs font-bold text-gray-400 uppercase">Ingreso Total (Último Mes)</p>
+                <p class="text-xs font-bold text-gray-400 uppercase">Ingreso Total Depositado</p>
                 <h2 id="kpi-total-ars" class="text-3xl font-black text-gray-800 mt-1">$ 0</h2>
-                <p class="text-xs text-gray-500 mt-2">Sueldo + Extras + Vacaciones</p>
+                <p class="text-xs text-gray-500 mt-2">Sueldo + SAC + Gratific. + Bono</p>
                 <i class="fas fa-wallet absolute -right-4 -bottom-4 text-emerald-50 opacity-50" style="font-size: 5rem;"></i>
             </div>
             
             <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500 relative overflow-hidden">
                 <p class="text-xs font-bold text-gray-400 uppercase">Ingreso Total en USD</p>
                 <h2 id="kpi-total-usd" class="text-3xl font-black text-gray-800 mt-1">u$s 0</h2>
-                <p class="text-xs text-gray-500 mt-2">Sueldo USD + Extras USD</p>
+                <p class="text-xs text-gray-500 mt-2">Todos los conceptos al TC del mes</p>
                 <i class="fas fa-dollar-sign absolute -right-4 -bottom-4 text-blue-50 opacity-50" style="font-size: 5rem;"></i>
             </div>
 
             <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-red-500 relative overflow-hidden">
-                <p class="text-xs font-bold text-gray-400 uppercase">Retenciones Totales</p>
+                <p class="text-xs font-bold text-gray-400 uppercase">Total Retenido (IIGG + UPCN)</p>
                 <h2 id="kpi-retenciones" class="text-3xl font-black text-gray-800 mt-1">$ 0</h2>
-                <p class="text-xs text-gray-500 mt-2">IIGG (Sueldo+SAC) + UPCN</p>
+                <p class="text-xs text-gray-500 mt-2">Suma de descuentos sobre bruto</p>
                 <i class="fas fa-hand-holding-usd absolute -right-4 -bottom-4 text-red-50 opacity-50" style="font-size: 5rem;"></i>
             </div>
 
             <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-purple-500 relative overflow-hidden">
-                <p class="text-xs font-bold text-gray-400 uppercase">Brecha vs Ajuste Inflación</p>
+                <p class="text-xs font-bold text-gray-400 uppercase">Brecha vs Sueldo Ajustado</p>
                 <h2 id="kpi-brecha" class="text-3xl font-black text-gray-800 mt-1">$ 0</h2>
-                <p class="text-xs text-gray-500 mt-2" id="txt-brecha">Diferencia neto vs ajustado</p>
+                <p class="text-xs text-gray-500 mt-2" id="txt-brecha">Sueldo Neto vs Ajustado (Inflación)</p>
                 <i class="fas fa-balance-scale absolute -right-4 -bottom-4 text-purple-50 opacity-50" style="font-size: 5rem;"></i>
             </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
             <div class="bg-white p-6 rounded-xl shadow-md border border-gray-100">
-                <h3 class="text-lg font-bold mb-4 text-gray-700"><i class="fas fa-chart-line text-emerald-500 mr-2"></i>Evolución: Sueldo Neto vs. Sueldo Ajustado</h3>
+                <h3 class="text-lg font-bold mb-4 text-gray-700"><i class="fas fa-chart-line text-emerald-500 mr-2"></i>Evolución: Sueldo Neto vs. Ajustado</h3>
                 <div class="relative h-[300px]">
                     <canvas id="chartEvolucionARS"></canvas>
                 </div>
             </div>
 
             <div class="bg-white p-6 rounded-xl shadow-md border border-gray-100">
-                <h3 class="text-lg font-bold mb-4 text-gray-700"><i class="fas fa-globe-americas text-blue-500 mr-2"></i>Evolución de Ingresos Totales en Dólares</h3>
+                <h3 class="text-lg font-bold mb-4 text-gray-700"><i class="fas fa-globe-americas text-blue-500 mr-2"></i>Ingreso Total Depositado en Dólares</h3>
                 <div class="relative h-[300px]">
                     <canvas id="chartEvolucionUSD"></canvas>
                 </div>
@@ -73,7 +74,7 @@
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div class="bg-white p-6 rounded-xl shadow-md border border-gray-100 lg:col-span-2">
-                <h3 class="text-lg font-bold mb-4 text-gray-700"><i class="fas fa-layer-group text-yellow-500 mr-2"></i>Composición del Ingreso Bruto Real (Pesos)</h3>
+                <h3 class="text-lg font-bold mb-4 text-gray-700"><i class="fas fa-layer-group text-yellow-500 mr-2"></i>Composición de Ingresos (Pesos Depositados)</h3>
                 <div class="relative h-[300px]">
                     <canvas id="chartComposicion"></canvas>
                 </div>
@@ -97,42 +98,44 @@
             try {
                 const response = await fetch(SHEET_URL);
                 const csvData = await response.text();
-                // Filtramos filas vacías y quitamos el encabezado
                 const filas = csvData.split('\n').map(row => row.split(',')).filter(row => row.length > 20).slice(1);
 
-                // EXTRACCIÓN QUIRÚRGICA DE TODAS TUS COLUMNAS (Recordá: Columna A = 0)
+                // LECTURA DE COLUMNAS EXACTAS (Restando 1 porque empezamos a contar desde 0 en programación)
                 const fechas = filas.map(f => f[2]); // Col C
                 
-                // Ingresos ARS
-                const netoARS = filas.map(f => parseFloat(f[3]) || 0); // Col D
-                const vacOtros = filas.map(f => parseFloat(f[5]) || 0); // Col F
-                const sacARS = filas.map(f => parseFloat(f[8]) || 0); // Col I
-                const gratifARS = filas.map(f => parseFloat(f[11]) || 0); // Col L
-                const bonoARS = filas.map(f => parseFloat(f[13]) || 0); // Col N
+                const netoARS = filas.map(f => parseFloat(f[3]) || 0); // Col D (Depositado)
+                const iiggSueldo = filas.map(f => parseFloat(f[4]) || 0); // Col E (Ya restado del neto)
+                const vacOtros = filas.map(f => parseFloat(f[5]) || 0); // Col F (Ya incluido en neto)
+                const upcn = filas.map(f => parseFloat(f[6]) || 0); // Col G (Ya restado del neto)
                 
-                // Retenciones
-                const iiggNeto = filas.map(f => parseFloat(f[4]) || 0); // Col E
-                const upcn = filas.map(f => parseFloat(f[6]) || 0); // Col G
-                const iiggSAC = filas.map(f => parseFloat(f[9]) || 0); // Col J
+                const sacARS = filas.map(f => parseFloat(f[8]) || 0); // Col I (Depositado)
+                const iiggSAC = filas.map(f => parseFloat(f[9]) || 0); // Col J (Ya restado del SAC)
                 
-                // Ingresos USD
+                const gratifARS = filas.map(f => parseFloat(f[11]) || 0); // Col L (Depositado)
+                const bonoARS = filas.map(f => parseFloat(f[13]) || 0); // Col N (Depositado)
+                
                 const netoUSD = filas.map(f => parseFloat(f[15]) || 0); // Col P
                 const sacUSD = filas.map(f => parseFloat(f[16]) || 0); // Col Q
                 const gratifUSD = filas.map(f => parseFloat(f[17]) || 0); // Col R
                 const bonoUSD = filas.map(f => parseFloat(f[18]) || 0); // Col S
                 
-                // Macro
                 const mep = filas.map(f => parseFloat(f[21]) || 0); // Col V
                 const inflacion = filas.map(f => parseFloat(f[24]) || 0); // Col Y
                 const ajustado = filas.map(f => parseFloat(f[25]) || 0); // Col Z
 
-                // CÁLCULOS COMPUESTOS
-                const ingresoTotalARS = netoARS.map((neto, i) => neto + vacOtros[i] + sacARS[i] + gratifARS[i] + bonoARS[i]);
+                // CÁLCULOS ESTRICTOS BASADOS EN TUS REGLAS
+                // Ingreso Total = La suma de lo que efectivamente se depositó
+                const ingresoTotalARS = netoARS.map((neto, i) => neto + sacARS[i] + gratifARS[i] + bonoARS[i]);
                 const ingresoTotalUSD = netoUSD.map((neto, i) => neto + sacUSD[i] + gratifUSD[i] + bonoUSD[i]);
-                const retencionesTotales = iiggNeto.map((iigg, i) => iigg + iiggSAC[i] + upcn[i]);
+                
+                // Retenciones Totales
+                const retencionesTotales = iiggSueldo.map((iigg, i) => iigg + iiggSAC[i] + upcn[i]);
+                
+                // Para el gráfico de composición: Extraemos "Vacaciones" del "Neto" para poder mostrarlas apiladas sin duplicar el total.
+                const sueldoBaseSinVacaciones = netoARS.map((neto, i) => neto - vacOtros[i]);
 
                 actualizarKPIs(ingresoTotalARS, ingresoTotalUSD, retencionesTotales, netoARS, ajustado, mep);
-                renderizarGraficos(fechas, netoARS, ajustado, ingresoTotalUSD, netoARS, vacOtros, sacARS, gratifARS, bonoARS, inflacion);
+                renderizarGraficos(fechas, netoARS, ajustado, ingresoTotalUSD, sueldoBaseSinVacaciones, vacOtros, sacARS, gratifARS, bonoARS, inflacion);
 
             } catch (error) {
                 console.error("Error cargando datos:", error);
@@ -149,7 +152,7 @@
             document.getElementById('kpi-retenciones').innerText = fmtARS.format(retenciones[last]);
             document.getElementById('kpi-mep-header').innerText = `USD MEP: $${mep[last]}`;
 
-            // Cálculo de Brecha
+            // Brecha: Solo comparamos el "Sueldo Neto" con el "Sueldo Ajustado" (Col D vs Col Z)
             const brecha = netoARS[last] - ajustado[last];
             const kpiBrecha = document.getElementById('kpi-brecha');
             kpiBrecha.innerText = fmtARS.format(brecha);
@@ -163,23 +166,23 @@
             }
         }
 
-        function renderizarGraficos(fechas, neto, ajustado, totalUSD, soloNeto, vac, sac, gratif, bono, inflacion) {
+        function renderizarGraficos(fechas, neto, ajustado, totalUSD, sueldoBase, vac, sac, gratif, bono, inflacion) {
             Chart.defaults.font.family = "'Inter', sans-serif";
             
-            // 1. Evolución ARS vs Ajustado
+            // 1. Evolución ARS: Sueldo Neto vs Ajustado
             new Chart(document.getElementById('chartEvolucionARS'), {
                 type: 'line',
                 data: {
                     labels: fechas,
                     datasets: [
-                        { label: 'Neto Cobrado', data: neto, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', fill: true, tension: 0.4 },
-                        { label: 'Sueldo Ajustado (Ideal)', data: ajustado, borderColor: '#ef4444', borderDash: [5, 5], tension: 0.4 }
+                        { label: 'Sueldo Neto Depositado', data: neto, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', fill: true, tension: 0.4 },
+                        { label: 'Sueldo Ajustado Ideal', data: ajustado, borderColor: '#ef4444', borderDash: [5, 5], tension: 0.4 }
                     ]
                 },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
             });
 
-            // 2. Evolución USD (Área)
+            // 2. Evolución Ingreso Total USD
             new Chart(document.getElementById('chartEvolucionUSD'), {
                 type: 'line',
                 data: {
@@ -196,15 +199,15 @@
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
             });
 
-            // 3. Composición (Barras Apiladas)
+            // 3. Composición (Desglose perfecto sin duplicar el Neto)
             new Chart(document.getElementById('chartComposicion'), {
                 type: 'bar',
                 data: {
                     labels: fechas,
                     datasets: [
-                        { label: 'Sueldo Neto', data: soloNeto, backgroundColor: '#10b981' },
+                        { label: 'Sueldo Base', data: sueldoBase, backgroundColor: '#10b981' },
                         { label: 'Vacaciones/Otros', data: vac, backgroundColor: '#34d399' },
-                        { label: 'SAC', data: sac, backgroundColor: '#60a5fa' },
+                        { label: 'SAC Depositado', data: sac, backgroundColor: '#60a5fa' },
                         { label: 'Gratificación', data: gratif, backgroundColor: '#f59e0b' },
                         { label: 'Bono', data: bono, backgroundColor: '#8b5cf6' }
                     ]
@@ -217,7 +220,7 @@
                 }
             });
 
-            // 4. Inflación (Barras)
+            // 4. Inflación
             new Chart(document.getElementById('chartInflacion'), {
                 type: 'bar',
                 data: {
