@@ -7,6 +7,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 </head>
 <body class="bg-slate-50 font-sans text-slate-900">
 
@@ -14,10 +15,10 @@
         <div class="container mx-auto flex flex-col md:flex-row justify-between items-center">
             <div>
                 <h1 class="text-3xl font-black tracking-tight uppercase">Análisis Salarial Pro</h1>
-                <p class="text-emerald-400 font-medium italic">Datos en tiempo real desde Google Sheets</p>
+                <p class="text-emerald-400 font-medium italic">Datos sincronizados con Google Sheets</p>
             </div>
             <div class="mt-4 md:mt-0 bg-slate-800 p-3 rounded-xl border border-slate-700">
-                <p id="kpi-mep-header" class="text-lg font-bold text-emerald-400 font-mono">USD MEP: --</p>
+                <p id="kpi-mep-header" class="text-lg font-bold text-emerald-400 font-mono">USD MEP: Cargando...</p>
             </div>
         </div>
     </header>
@@ -26,7 +27,7 @@
         
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Total Ingresado</p>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Total Ingresado (Mes)</p>
                 <h2 id="kpi-total-ars" class="text-3xl font-black text-slate-800 mt-1">$ 0</h2>
                 <div class="h-1 w-full bg-emerald-500 mt-3"></div>
             </div>
@@ -38,13 +39,13 @@
             </div>
 
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Retenciones</p>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Retenciones (Mes)</p>
                 <h2 id="kpi-retenciones" class="text-3xl font-black text-slate-800 mt-1">$ 0</h2>
                 <div class="h-1 w-full bg-red-500 mt-3"></div>
             </div>
 
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Brecha Inflación</p>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Brecha vs Inflación</p>
                 <h2 id="kpi-brecha" class="text-3xl font-black text-slate-800 mt-1">$ 0</h2>
                 <div id="status-bar" class="h-1 w-full bg-purple-500 mt-3"></div>
             </div>
@@ -52,7 +53,7 @@
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
             <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100">
-                <h3 class="font-bold text-slate-700 mb-6 uppercase text-sm tracking-widest">Evolución Real vs Inflación</h3>
+                <h3 class="font-bold text-slate-700 mb-6 uppercase text-sm tracking-widest">Evolución: Neto vs Ajustado</h3>
                 <div class="h-[350px]"><canvas id="chartEvolucionARS"></canvas></div>
             </div>
             <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100">
@@ -74,111 +75,132 @@
     </main>
 
     <script>
-        const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTvVd59efvMVqWz091bd0PD7bSBKLy_zS_4CYjmDp-cxi7z9gqQxb2FoJZlL8NWRfIB-3rXK88vgqU2/pub?gid=0&single=true&output=csv'; // <--- PEGÁ TU ENLACE CSV ACÁ
+        // === PEGAR TU LINK AQUÍ ===
+        const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTvVd59efvMVqWz091bd0PD7bSBKLy_zS_4CYjmDp-cxi7z9gqQxb2FoJZlL8NWRfIB-3rXK88vgqU2/pub?gid=0&single=true&output=csv'; 
 
-        // FUNCIÓN CLAVE: Limpia cualquier formato de moneda argentina
+        // Función que limpia los números (ahora es a prueba de balas)
         function limpiarNumero(dato) {
-            if (!dato) return 0;
-            // Elimina símbolos de peso, espacios y puntos de miles
-            let limpio = dato.toString().replace(/\$/g, '').replace(/\s/g, '').replace(/\./g, '');
-            // Cambia la coma decimal por punto
+            if (!dato || dato === "") return 0;
+            // Quitamos $, comillas y puntos de miles
+            let limpio = dato.toString().replace(/[\$\s\"\.]/g, '');
+            // Cambiamos coma decimal por punto
             limpio = limpio.replace(',', '.');
             let resultado = parseFloat(limpio);
             return isNaN(resultado) ? 0 : resultado;
         }
 
-        async function init() {
-            try {
-                const res = await fetch(SHEET_URL);
-                const csv = await res.text();
-                
-                // Detectar si el separador es coma o punto y coma
-                const separador = csv.includes(';') ? ';' : ',';
-                const lineas = csv.split(/\r?\n/).filter(line => line.trim() !== "");
-                const filas = lineas.slice(1).map(l => l.split(separador));
+        function initDashboard() {
+            Papa.parse(SHEET_URL, {
+                download: true,
+                header: false,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    try {
+                        // Filtramos para evitar el encabezado y filas vacías. 
+                        // Asumimos que la columna C (índice 2) debe tener texto para ser una fila válida.
+                        const filas = results.data.filter(f => f.length > 20 && f[2] && f[2].toLowerCase() !== 'fecha' && f[2].toLowerCase() !== 'mes');
 
-                // Extraer datos con el mapeo de tus columnas
-                const fechas = filas.map(f => f[2]); // Col C
-                const netoARS = filas.map(f => limpiarNumero(f[3])); // Col D
-                const iiggSueldo = filas.map(f => limpiarNumero(f[4])); // Col E
-                const vacOtros = filas.map(f => limpiarNumero(f[5])); // Col F
-                const upcn = filas.map(f => limpiarNumero(f[6])); // Col G
-                const sacARS = filas.map(f => limpiarNumero(f[8])); // Col I
-                const iiggSAC = filas.map(f => limpiarNumero(f[9])); // Col J
-                const gratifARS = filas.map(f => limpiarNumero(f[11])); // Col L
-                const bonoARS = filas.map(f => limpiarNumero(f[13])); // Col N
-                
-                const netoUSD = filas.map(f => limpiarNumero(f[15])); // Col P
-                const sacUSD = filas.map(f => limpiarNumero(f[16])); // Col Q
-                const gratifUSD = filas.map(f => limpiarNumero(f[17])); // Col R
-                const bonoUSD = filas.map(f => limpiarNumero(f[18])); // Col S
-                
-                const mep = filas.map(f => limpiarNumero(f[21])); // Col V
-                const inflacion = filas.map(f => limpiarNumero(f[24])); // Col Y
-                const ajustado = filas.map(f => limpiarNumero(f[25])); // Col Z
+                        if(filas.length === 0) {
+                            alert("No se detectaron datos. Verificá que el link sea el de 'Publicar en la web' -> CSV.");
+                            return;
+                        }
 
-                // Procesamiento
-                const ingresoTotalARS = netoARS.map((n, i) => n + sacARS[i] + gratifARS[i] + bonoARS[i]);
-                const ingresoTotalUSD = netoUSD.map((n, i) => n + sacUSD[i] + gratifUSD[i] + bonoUSD[i]);
-                const retenciones = iiggSueldo.map((v, i) => v + iiggSAC[i] + upcn[i]);
-                const sueldoBase = netoARS.map((n, i) => n - vacOtros[i]);
+                        // Asignación estricta de columnas según tu mapa
+                        const fechas = filas.map(f => f[2]); // Col C
+                        
+                        const netoARS = filas.map(f => limpiarNumero(f[3])); // Col D
+                        const iiggSueldo = filas.map(f => limpiarNumero(f[4])); // Col E
+                        const vacOtros = filas.map(f => limpiarNumero(f[5])); // Col F
+                        const upcn = filas.map(f => limpiarNumero(f[6])); // Col G
+                        
+                        const sacARS = filas.map(f => limpiarNumero(f[8])); // Col I
+                        const iiggSAC = filas.map(f => limpiarNumero(f[9])); // Col J
+                        
+                        const gratifARS = filas.map(f => limpiarNumero(f[11])); // Col L
+                        const bonoARS = filas.map(f => limpiarNumero(f[13])); // Col N
+                        
+                        const netoUSD = filas.map(f => limpiarNumero(f[15])); // Col P
+                        const sacUSD = filas.map(f => limpiarNumero(f[16])); // Col Q
+                        const gratifUSD = filas.map(f => limpiarNumero(f[17])); // Col R
+                        const bonoUSD = filas.map(f => limpiarNumero(f[18])); // Col S
+                        
+                        const mep = filas.map(f => limpiarNumero(f[21])); // Col V
+                        const inflacion = filas.map(f => limpiarNumero(f[24])); // Col Y
+                        const ajustado = filas.map(f => limpiarNumero(f[25])); // Col Z
 
-                // Renderizado
-                renderKPIs(ingresoTotalARS, ingresoTotalUSD, retenciones, netoARS, ajustado, mep);
-                renderCharts(fechas, netoARS, ajustado, ingresoTotalUSD, sueldoBase, vacOtros, sacARS, gratifARS, bonoARS, inflacion);
+                        // Cálculos finales
+                        const ingresoTotalARS = netoARS.map((n, i) => n + sacARS[i] + gratifARS[i] + bonoARS[i]);
+                        const ingresoTotalUSD = netoUSD.map((n, i) => n + sacUSD[i] + gratifUSD[i] + bonoUSD[i]);
+                        const retenciones = iiggSueldo.map((v, i) => v + iiggSAC[i] + upcn[i]);
+                        const sueldoBase = netoARS.map((n, i) => n - vacOtros[i]);
 
-            } catch (e) {
-                console.error("Error detallado:", e);
-                alert("Error al leer el archivo. Verificá que el link sea de 'Valores separados por comas (.csv)'");
-            }
+                        renderKPIs(ingresoTotalARS, ingresoTotalUSD, retenciones, netoARS, ajustado, mep);
+                        renderCharts(fechas, netoARS, ajustado, ingresoTotalUSD, sueldoBase, vacOtros, sacARS, gratifARS, bonoARS, inflacion);
+
+                    } catch (error) {
+                        console.error("Error al procesar los datos:", error);
+                        alert("Hubo un error calculando los gráficos. Revisá la consola.");
+                    }
+                },
+                error: function(error) {
+                    console.error("Error de PapaParse:", error);
+                    alert("No se pudo leer el archivo CSV.");
+                }
+            });
         }
 
         function renderKPIs(iARS, iUSD, ret, neto, ajust, mep) {
             const idx = iARS.length - 1;
-            const f = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 });
+            const fARS = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 });
             
-            document.getElementById('kpi-total-ars').innerText = f.format(iARS[idx]);
-            document.getElementById('kpi-total-usd').innerText = 'u$s ' + iUSD[idx].toLocaleString('es-AR');
-            document.getElementById('kpi-retenciones').innerText = f.format(ret[idx]);
+            document.getElementById('kpi-total-ars').innerText = fARS.format(iARS[idx]);
+            document.getElementById('kpi-total-usd').innerText = 'u$s ' + iUSD[idx].toLocaleString('es-AR', {maximumFractionDigits: 0});
+            document.getElementById('kpi-retenciones').innerText = fARS.format(ret[idx]);
             document.getElementById('kpi-mep-header').innerText = `USD MEP: $${mep[idx]}`;
 
             const brecha = neto[idx] - ajust[idx];
-            document.getElementById('kpi-brecha').innerText = f.format(brecha);
+            document.getElementById('kpi-brecha').innerText = fARS.format(brecha);
             document.getElementById('status-bar').className = brecha >= 0 ? 'h-1 w-full bg-emerald-500 mt-3' : 'h-1 w-full bg-red-500 mt-3';
         }
+
+        // Variables globales para destruir gráficos viejos si se recarga
+        let chart1, chart2, chart3, chart4;
 
         function renderCharts(fechas, neto, ajust, totUSD, base, vac, sac, grat, bono, infla) {
             const ctxConfig = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } };
 
-            new Chart(document.getElementById('chartEvolucionARS'), {
+            if(chart1) chart1.destroy();
+            chart1 = new Chart(document.getElementById('chartEvolucionARS'), {
                 type: 'line',
                 data: {
                     labels: fechas,
                     datasets: [
-                        { label: 'Neto Real', data: neto, borderColor: '#10b981', tension: 0.3, fill: true, backgroundColor: 'rgba(16,185,129,0.1)' },
+                        { label: 'Neto Depositado', data: neto, borderColor: '#10b981', tension: 0.3, fill: true, backgroundColor: 'rgba(16,185,129,0.1)' },
                         { label: 'Ajustado x Inflación', data: ajust, borderColor: '#ef4444', borderDash: [5,5], tension: 0.3 }
                     ]
                 },
                 options: ctxConfig
             });
 
-            new Chart(document.getElementById('chartEvolucionUSD'), {
+            if(chart2) chart2.destroy();
+            chart2 = new Chart(document.getElementById('chartEvolucionUSD'), {
                 type: 'line',
                 data: {
                     labels: fechas,
-                    datasets: [{ label: 'USD Totales', data: totUSD, borderColor: '#3b82f6', tension: 0.3, fill: true, backgroundColor: 'rgba(59,130,246,0.1)' }]
+                    datasets: [{ label: 'Ingreso Total en USD', data: totUSD, borderColor: '#3b82f6', tension: 0.3, fill: true, backgroundColor: 'rgba(59,130,246,0.1)' }]
                 },
                 options: ctxConfig
             });
 
-            new Chart(document.getElementById('chartComposicion'), {
+            if(chart3) chart3.destroy();
+            chart3 = new Chart(document.getElementById('chartComposicion'), {
                 type: 'bar',
                 data: {
                     labels: fechas,
                     datasets: [
                         { label: 'Sueldo Base', data: base, backgroundColor: '#10b981' },
                         { label: 'Vacaciones/Otros', data: vac, backgroundColor: '#34d399' },
-                        { label: 'SAC', data: sac, backgroundColor: '#60a5fa' },
+                        { label: 'SAC Depositado', data: sac, backgroundColor: '#60a5fa' },
                         { label: 'Gratificación', data: grat, backgroundColor: '#f59e0b' },
                         { label: 'Bono', data: bono, backgroundColor: '#8b5cf6' }
                     ]
@@ -186,17 +208,18 @@
                 options: { ...ctxConfig, scales: { x: { stacked: true }, y: { stacked: true } } }
             });
 
-            new Chart(document.getElementById('chartInflacion'), {
+            if(chart4) chart4.destroy();
+            chart4 = new Chart(document.getElementById('chartInflacion'), {
                 type: 'bar',
                 data: {
                     labels: fechas,
-                    datasets: [{ label: '% Inflación', data: infla, backgroundColor: '#f87171' }]
+                    datasets: [{ label: '% Inflación Mensual', data: infla, backgroundColor: '#f87171' }]
                 },
                 options: ctxConfig
             });
         }
 
-        init();
+        initDashboard();
     </script>
 </body>
 </html>
