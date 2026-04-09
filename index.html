@@ -33,7 +33,7 @@
             </div>
             
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Total en USD</p>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Sueldo Neto en USD</p>
                 <h2 id="kpi-total-usd" class="text-3xl font-black text-slate-800 mt-1">u$s 0</h2>
                 <div class="h-1 w-full bg-blue-500 mt-3"></div>
             </div>
@@ -51,24 +51,20 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100">
-                <h3 class="font-bold text-slate-700 mb-6 uppercase text-sm tracking-widest">Evolución: Neto vs Ajustado</h3>
-                <div class="h-[350px]"><canvas id="chartEvolucionARS"></canvas></div>
-            </div>
-            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100">
-                <h3 class="font-bold text-slate-700 mb-6 uppercase text-sm tracking-widest">Ingresos Totales en USD</h3>
-                <div class="h-[350px]"><canvas id="chartEvolucionUSD"></canvas></div>
-            </div>
+        <div class="mb-8 bg-white p-6 rounded-2xl shadow-md border border-slate-100">
+            <h3 class="font-bold text-slate-700 mb-6 uppercase text-sm tracking-widest flex items-center">
+                <i class="fas fa-chart-line text-emerald-500 mr-2"></i> Evolución: Sueldo Neto vs Ajustado Inflación vs Dólar
+            </h3>
+            <div class="h-[400px]"><canvas id="chartEvolucion"></canvas></div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-md border border-slate-100">
-                <h3 class="font-bold text-slate-700 mb-6 uppercase text-sm tracking-widest">Composición Detallada</h3>
+                <h3 class="font-bold text-slate-700 mb-6 uppercase text-sm tracking-widest"><i class="fas fa-layer-group text-yellow-500 mr-2"></i>Composición Detallada</h3>
                 <div class="h-[350px]"><canvas id="chartComposicion"></canvas></div>
             </div>
             <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100">
-                <h3 class="font-bold text-slate-700 mb-6 uppercase text-sm tracking-widest">Inflación Mensual</h3>
+                <h3 class="font-bold text-slate-700 mb-6 uppercase text-sm tracking-widest"><i class="fas fa-fire text-red-500 mr-2"></i>Inflación Mensual</h3>
                 <div class="h-[350px]"><canvas id="chartInflacion"></canvas></div>
             </div>
         </div>
@@ -78,12 +74,10 @@
         // === PEGAR TU LINK AQUÍ ===
         const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTvVd59efvMVqWz091bd0PD7bSBKLy_zS_4CYjmDp-cxi7z9gqQxb2FoJZlL8NWRfIB-3rXK88vgqU2/pub?gid=0&single=true&output=csv'; 
 
-        // Función que limpia los números (ahora es a prueba de balas)
+        // Función que limpia los números
         function limpiarNumero(dato) {
             if (!dato || dato === "") return 0;
-            // Quitamos $, comillas y puntos de miles
             let limpio = dato.toString().replace(/[\$\s\"\.]/g, '');
-            // Cambiamos coma decimal por punto
             limpio = limpio.replace(',', '.');
             let resultado = parseFloat(limpio);
             return isNaN(resultado) ? 0 : resultado;
@@ -96,8 +90,6 @@
                 skipEmptyLines: true,
                 complete: function(results) {
                     try {
-                        // Filtramos para evitar el encabezado y filas vacías. 
-                        // Asumimos que la columna C (índice 2) debe tener texto para ser una fila válida.
                         const filas = results.data.filter(f => f.length > 20 && f[2] && f[2].toLowerCase() !== 'fecha' && f[2].toLowerCase() !== 'mes');
 
                         if(filas.length === 0) {
@@ -105,7 +97,7 @@
                             return;
                         }
 
-                        // Asignación estricta de columnas según tu mapa
+                        // Asignación de columnas
                         const fechas = filas.map(f => f[2]); // Col C
                         
                         const netoARS = filas.map(f => limpiarNumero(f[3])); // Col D
@@ -117,12 +109,9 @@
                         const iiggSAC = filas.map(f => limpiarNumero(f[9])); // Col J
                         
                         const gratifARS = filas.map(f => limpiarNumero(f[11])); // Col L
-                        const bonoARS = filas.map(f => limpiarNumero(f[13])); // Col N
+                        const bonoARS = filas.map(f => limpiarNumero(f[12])); // Col M (¡Corregido!)
                         
                         const netoUSD = filas.map(f => limpiarNumero(f[15])); // Col P
-                        const sacUSD = filas.map(f => limpiarNumero(f[16])); // Col Q
-                        const gratifUSD = filas.map(f => limpiarNumero(f[17])); // Col R
-                        const bonoUSD = filas.map(f => limpiarNumero(f[18])); // Col S
                         
                         const mep = filas.map(f => limpiarNumero(f[21])); // Col V
                         const inflacion = filas.map(f => limpiarNumero(f[24])); // Col Y
@@ -130,12 +119,15 @@
 
                         // Cálculos finales
                         const ingresoTotalARS = netoARS.map((n, i) => n + sacARS[i] + gratifARS[i] + bonoARS[i]);
-                        const ingresoTotalUSD = netoUSD.map((n, i) => n + sacUSD[i] + gratifUSD[i] + bonoUSD[i]);
+                        
+                        // Ahora USD refleja SOLO el sueldo neto
+                        const sueldoNetoUSD = netoUSD; 
+
                         const retenciones = iiggSueldo.map((v, i) => v + iiggSAC[i] + upcn[i]);
                         const sueldoBase = netoARS.map((n, i) => n - vacOtros[i]);
 
-                        renderKPIs(ingresoTotalARS, ingresoTotalUSD, retenciones, netoARS, ajustado, mep);
-                        renderCharts(fechas, netoARS, ajustado, ingresoTotalUSD, sueldoBase, vacOtros, sacARS, gratifARS, bonoARS, inflacion);
+                        renderKPIs(ingresoTotalARS, sueldoNetoUSD, retenciones, netoARS, ajustado, mep);
+                        renderCharts(fechas, netoARS, ajustado, sueldoNetoUSD, sueldoBase, vacOtros, sacARS, gratifARS, bonoARS, inflacion);
 
                     } catch (error) {
                         console.error("Error al procesar los datos:", error);
@@ -163,35 +155,73 @@
             document.getElementById('status-bar').className = brecha >= 0 ? 'h-1 w-full bg-emerald-500 mt-3' : 'h-1 w-full bg-red-500 mt-3';
         }
 
-        // Variables globales para destruir gráficos viejos si se recarga
-        let chart1, chart2, chart3, chart4;
+        // Variables para destruir gráficos
+        let chart1, chart3, chart4;
 
-        function renderCharts(fechas, neto, ajust, totUSD, base, vac, sac, grat, bono, infla) {
-            const ctxConfig = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } };
+        function renderCharts(fechas, neto, ajust, netoUSD, base, vac, sac, grat, bono, infla) {
+            Chart.defaults.font.family = "'Inter', sans-serif";
 
+            // 1. Gráfico Unificado (Doble Eje Y)
             if(chart1) chart1.destroy();
-            chart1 = new Chart(document.getElementById('chartEvolucionARS'), {
+            chart1 = new Chart(document.getElementById('chartEvolucion'), {
                 type: 'line',
                 data: {
                     labels: fechas,
                     datasets: [
-                        { label: 'Neto Depositado', data: neto, borderColor: '#10b981', tension: 0.3, fill: true, backgroundColor: 'rgba(16,185,129,0.1)' },
-                        { label: 'Ajustado x Inflación', data: ajust, borderColor: '#ef4444', borderDash: [5,5], tension: 0.3 }
+                        { 
+                            label: 'Neto Depositado ($)', 
+                            data: neto, 
+                            borderColor: '#10b981', 
+                            tension: 0.3, 
+                            fill: true, 
+                            backgroundColor: 'rgba(16,185,129,0.1)',
+                            yAxisID: 'y'
+                        },
+                        { 
+                            label: 'Ajustado x Inflación ($)', 
+                            data: ajust, 
+                            borderColor: '#ef4444', 
+                            borderDash: [5,5], 
+                            tension: 0.3,
+                            yAxisID: 'y'
+                        },
+                        {
+                            type: 'bar',
+                            label: 'Sueldo Neto (USD)',
+                            data: netoUSD,
+                            backgroundColor: 'rgba(59, 130, 246, 0.4)',
+                            borderColor: '#3b82f6',
+                            borderWidth: 1,
+                            borderRadius: 4,
+                            yAxisID: 'y1'
+                        }
                     ]
                 },
-                options: ctxConfig
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    plugins: { legend: { position: 'bottom' } },
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: { display: true, text: 'Pesos (ARS)', color: '#64748b' },
+                            ticks: { callback: function(value) { return '$' + value.toLocaleString('es-AR'); } }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: { display: true, text: 'Dólares (USD)', color: '#64748b' },
+                            grid: { drawOnChartArea: false }, // Evita que se crucen las líneas de fondo
+                            ticks: { callback: function(value) { return 'u$s ' + value.toLocaleString('es-AR'); } }
+                        }
+                    }
+                }
             });
 
-            if(chart2) chart2.destroy();
-            chart2 = new Chart(document.getElementById('chartEvolucionUSD'), {
-                type: 'line',
-                data: {
-                    labels: fechas,
-                    datasets: [{ label: 'Ingreso Total en USD', data: totUSD, borderColor: '#3b82f6', tension: 0.3, fill: true, backgroundColor: 'rgba(59,130,246,0.1)' }]
-                },
-                options: ctxConfig
-            });
-
+            // 3. Composición (Barras Apiladas)
             if(chart3) chart3.destroy();
             chart3 = new Chart(document.getElementById('chartComposicion'), {
                 type: 'bar',
@@ -205,17 +235,22 @@
                         { label: 'Bono', data: bono, backgroundColor: '#8b5cf6' }
                     ]
                 },
-                options: { ...ctxConfig, scales: { x: { stacked: true }, y: { stacked: true } } }
+                options: { 
+                    responsive: true, maintainAspectRatio: false, 
+                    scales: { x: { stacked: true }, y: { stacked: true } },
+                    plugins: { legend: { position: 'bottom' } }
+                }
             });
 
+            // 4. Inflación
             if(chart4) chart4.destroy();
             chart4 = new Chart(document.getElementById('chartInflacion'), {
                 type: 'bar',
                 data: {
                     labels: fechas,
-                    datasets: [{ label: '% Inflación Mensual', data: infla, backgroundColor: '#f87171' }]
+                    datasets: [{ label: '% Inflación Mensual', data: infla, backgroundColor: '#f87171', borderRadius: 4 }]
                 },
-                options: ctxConfig
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
             });
         }
 
