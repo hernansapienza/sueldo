@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Financiero - Hernán</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-slate-50 font-sans text-slate-800">
+
+    <header class="bg-slate-900 text-white p-6 shadow-xl border-b-4 border-blue-500">
+        <div class="container mx-auto flex flex-col md:flex-row justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-black tracking-tight">ANÁLISIS DE INGRESOS</h1>
+                <p class="text-blue-400 font-medium">Seguimiento de Salarios e Inflación</p>
+            </div>
+            <div class="mt-4 md:mt-0 text-right">
+                <p id="txt-fecha" class="text-lg font-bold"></p>
+                <p class="text-xs opacity-70 uppercase tracking-widest">Actualizado desde Google Sheets</p>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-4 md:p-8">
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex items-center mb-2">
+                    <div class="p-2 bg-green-100 rounded-lg text-green-600 mr-3"><i class="fas fa-wallet"></i></div>
+                    <span class="text-sm font-bold text-slate-500 uppercase">Último Neto</span>
+                </div>
+                <h2 id="kpi-neto" class="text-3xl font-black text-slate-800">$ 0</h2>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex items-center mb-2">
+                    <div class="p-2 bg-blue-100 rounded-lg text-blue-600 mr-3"><i class="fas fa-dollar-sign"></i></div>
+                    <span class="text-sm font-bold text-slate-500 uppercase">Equivalente USD</span>
+                </div>
+                <h2 id="kpi-usd" class="text-3xl font-black text-slate-800">u$s 0</h2>
+                <p id="kpi-mep" class="text-xs text-slate-400 mt-1 italic"></p>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex items-center mb-2">
+                    <div class="p-2 bg-red-100 rounded-lg text-red-600 mr-3"><i class="fas fa-hand-holding-usd"></i></div>
+                    <span class="text-sm font-bold text-slate-500 uppercase">Retenciones (IIGG+UPCN)</span>
+                </div>
+                <h2 id="kpi-retenciones" class="text-3xl font-black text-slate-800">$ 0</h2>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex items-center mb-2">
+                    <div class="p-2 bg-purple-100 rounded-lg text-purple-600 mr-3"><i class="fas fa-chart-line"></i></div>
+                    <span class="text-sm font-bold text-slate-500 uppercase">Objetivo Inflación</span>
+                </div>
+                <h2 id="kpi-inflacion" class="text-3xl font-black text-slate-800">$ 0</h2>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
+            <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-md">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold flex items-center">
+                        <i class="fas fa-chart-area mr-2 text-blue-500"></i> Evolución: Real vs. Inflación
+                    </h3>
+                </div>
+                <div class="relative h-[400px]">
+                    <canvas id="chartEvolucion"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-md">
+                <h3 class="text-xl font-bold mb-6 flex items-center">
+                    <i class="fas fa-gift mr-2 text-orange-500"></i> Pagos Extras (Acumulados)
+                </h3>
+                <div class="relative h-[400px]">
+                    <canvas id="chartExtras"></canvas>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // CONFIGURACIÓN: Pegá acá tu link de Google Sheets (formato CSV)
+        const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTvVd59efvMVqWz091bd0PD7bSBKLy_zS_4CYjmDp-cxi7z9gqQxb2FoJZlL8NWRfIB-3rXK88vgqU2/pub?gid=0&single=true&output=csv';
+
+        async function initDashboard() {
+            try {
+                const response = await fetch(SHEET_URL);
+                const csvData = await response.text();
+                const filas = csvData.split('\n').map(row => row.split(',')).filter(row => row.length > 5);
+                
+                // Quitamos el encabezado
+                const datos = filas.slice(1);
+
+                // Mapeo de columnas según tu detalle (Restando 1 porque A=0)
+                const labels = datos.map(f => f[2]); // Col C: Fecha
+                const neto = datos.map(f => parseFloat(f[3]) || 0); // Col D
+                const iigg = datos.map(f => parseFloat(f[4]) || 0); // Col E
+                const upcn = datos.map(f => parseFloat(f[6]) || 0); // Col G
+                const usd = datos.map(f => parseFloat(f[15]) || 0); // Col P
+                const mep = datos.map(f => parseFloat(f[21]) || 0); // Col V
+                const ajustado = datos.map(f => parseFloat(f[25]) || 0); // Col Z
+                
+                // Extras
+                const sac = datos.reduce((a, b) => a + (parseFloat(b[8]) || 0), 0); // Col I
+                const gratif = datos.reduce((a, b) => a + (parseFloat(b[11]) || 0), 0); // Col L
+                const bono = datos.reduce((a, b) => a + (parseFloat(b[13]) || 0), 0); // Col N
+
+                actualizarKPIs(neto, usd, iigg, upcn, ajustado, mep);
+                renderizarGraficos(labels, neto, ajustado, sac, gratif, bono);
+
+            } catch (error) {
+                console.error("Error cargando datos:", error);
+            }
+        }
+
+        function actualizarKPIs(neto, usd, iigg, upcn, ajustado, mep) {
+            const last = neto.length - 1;
+            
+            // Formateador de moneda
+            const fmt = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 });
+            
+            document.getElementById('kpi-neto').innerText = fmt.format(neto[last]);
+            document.getElementById('kpi-usd').innerText = 'u$s ' + usd[last].toLocaleString();
+            document.getElementById('kpi-mep').innerText = 'TC MEP: $' + mep[last];
+            
+            const totalRetenciones = iigg[last] + upcn[last];
+            document.getElementById('kpi-retenciones').innerText = fmt.format(totalRetenciones);
+            
+            document.getElementById('kpi-inflacion').innerText = fmt.format(ajustado[last]);
+        }
+
+        function renderizarGraficos(labels, neto, ajustado, sac, gratif, bono) {
+            // Gráfico 1: Evolución
+            new Chart(document.getElementById('chartEvolucion'), {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Sueldo Neto Real',
+                            data: neto,
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            fill: true,
+                            tension: 0.3
+                        },
+                        {
+                            label: 'Sueldo Ajustado x Inflación',
+                            data: ajustado,
+                            borderColor: '#ef4444',
+                            borderDash: [5, 5],
+                            fill: false,
+                            tension: 0.3
+                        }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            // Gráfico 2: Extras (Dona)
+            new Chart(document.getElementById('chartExtras'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['SAC', 'Gratificación', 'Bono'],
+                    datasets: [{
+                        data: [sac, gratif, bono],
+                        backgroundColor: ['#3b82f6', '#f59e0b', '#8b5cf6']
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        }
+
+        document.getElementById('txt-fecha').innerText = new Date().toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+        initDashboard();
+    </script>
+</body>
+</html>
